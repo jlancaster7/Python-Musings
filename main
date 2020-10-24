@@ -1,0 +1,194 @@
+from collections import deque
+
+
+class Calculator:
+    def __init__(self, expression):
+        self.expression = expression
+        self.storage = []
+        self.storage_postfix = []
+        self.history = {}
+        self.possible_exp = {'+': 2, '-': 2, '*': 3, '/': 3, '(': 1, ')': 1, '^': 4}
+        self.possible_errors = {'j': 'Invalid identifier', 'k': 'Invalid assignment', 'l': 'Invalid expression',
+                                'm': 'Unknown variable', 'n': 'Unknown command'}
+        self.error = ''
+
+    def error_reporting(self):
+        if self.error in self.possible_errors.keys():
+            print(self.possible_errors[self.error])
+            return 'e'
+        return None
+
+    def expression_type(self):
+        if str(self.expression).endswith('-') or str(self.expression).endswith('+'):
+            self.error = 'l'
+        elif str(self.expression).count('=') == 1:
+            return 1
+        elif str(self.expression).count('=') > 1:
+            self.error = 'k'
+        elif any(exp in self.expression for exp in self.possible_exp.keys()):
+            try:
+                t = int(self.expression)
+                return 4
+            except ValueError:
+                return 2
+        elif str(self.expression).isdigit() or str(self.expression) in self.history.keys():
+            return 4
+        else:
+            self.error = 'n'
+
+    def variable_check(self):
+        eq_c = 0
+        for x in self.storage:
+            if x == '=':
+                eq_c = 1
+            elif x == ' ' or (x in self.possible_exp.keys()):
+                continue
+            elif any(char.isalpha() for char in x) and any(char.isdigit() for char in x) and eq_c == 0:
+                self.error = 'j'
+            elif any(char.isalpha() for char in x) and any(char.isdigit() for char in x) and eq_c == 1:
+                self.error = 'k'
+            elif eq_c == 1 and x not in self.history.keys() and not x.isdigit():
+                self.error = 'j'
+
+    def expression_check(self):
+        z = ''
+        exp_stack = deque()
+        for x in self.storage:
+            if x == z and (x != '-' or x != '+'):
+                self.error = 'l'
+                break
+            z = x
+        for x in self.storage:
+            if x == '(':
+                exp_stack.append(x)
+            elif x == ')':
+                try:
+                    exp_stack.pop()
+                except IndexError:
+                    self.error = 'l'
+                    break
+        if len(exp_stack) != 0:
+            self.error = 'l'
+
+    def separator(self):
+        var = ''
+        for i in self.expression:
+            if i == ' ':
+                continue
+            elif i.isalnum():
+                var += i
+            elif i == '=' or (i in self.possible_exp.keys()):
+                if var != '':
+                    self.storage.append(var)
+                    var = ''
+                self.storage.append(i)
+        if var != '':
+            self.storage.append(var)
+
+    def postfix_transform(self):
+        post_stack = deque()
+        for i in self.storage:
+            if i not in self.possible_exp.keys():
+                self.storage_postfix.append(i)
+            elif i == '(':
+                post_stack.append(i)
+            elif i == ')':
+                top_stack = post_stack.pop()
+                while top_stack != '(':
+                    self.storage_postfix.append(top_stack)
+                    top_stack = post_stack.pop()
+            else:
+                while len(post_stack) != 0 and (self.possible_exp[post_stack[-1]] >= self.possible_exp[i]):
+                    self.storage_postfix.append(post_stack.pop())
+                post_stack.append(i)
+        while len(post_stack) != 0:
+            self.storage_postfix.append(post_stack.pop())
+
+    def var_assignment(self):
+        self.history[self.storage[0]] = self.postfix_evaluator(self.storage_postfix[2:])
+
+    def postfix_evaluator(self, z):
+        total1 = 0
+        c_sign = 1
+        eval_stack = deque()
+        for t in z:
+            if t.isalpha():
+                eval_stack.append(self.history[t])
+                c_sign = 1
+            elif t.isdigit():
+                eval_stack.append(t)
+                c_sign = 1
+            elif t in self.possible_exp.keys():
+                if t == '^':
+                    x_one = int(eval_stack.pop())
+                    x_two = int(eval_stack.pop())
+                    eval_stack.append(x_two ** x_one)
+                elif t == '/':
+                    x_one = int(eval_stack.pop())
+                    x_two = int(eval_stack.pop())
+                    eval_stack.append(x_two / x_one)
+                elif t == '*':
+                    x_one = int(eval_stack.pop())
+                    x_two = int(eval_stack.pop())
+                    eval_stack.append(x_two * x_one)
+                elif t == '+':
+                    x_one = int(eval_stack.pop())
+                    x_two = int(eval_stack.pop())
+                    eval_stack.append(x_two + x_one)
+                elif t == '-':
+                    x_one = int(eval_stack.pop())
+                    x_two = int(eval_stack.pop())
+                    eval_stack.append(x_two - x_one)
+        return eval_stack[0]
+
+
+x = ''
+current_calc = Calculator(x)
+while True:
+    current_calc.expression = input()
+    current_calc.storage = []
+    current_calc.storage_postfix = []
+    current_calc.error = None
+    if current_calc.expression.startswith('/'):
+        if current_calc.expression == '/exit':
+            print('Bye!')
+            break
+        elif current_calc.expression == '/help':
+            print('The program calculates the sum or the difference of numbers')
+            continue
+        else:
+            current_calc.error = 'n'
+            current_calc.error_reporting()
+            continue
+    if current_calc.expression == '':
+        continue
+    express_type = current_calc.expression_type()  # determine what type of expression this is and that it is valid
+    escape = current_calc.error_reporting()  # checking if any errors were output from the expression_type function
+    if escape == 'e':
+        continue
+    current_calc.separator()  # separates the expression into a list and stores it in a new class variable called
+    # 'storage'
+    current_calc.variable_check() # make sure that all variables and numbers are valid
+    current_calc.expression_check()
+    escape = current_calc.error_reporting()  # checking if any errors were output from the variable_check function
+    if escape == 'e':
+        continue
+    current_calc.postfix_transform()
+    if express_type == 1:
+        current_calc.var_assignment()
+        escape = current_calc.error_reporting()
+        if escape == 'e':
+            continue
+    if express_type == 2:
+        print(current_calc.postfix_evaluator(current_calc.storage_postfix))
+        escape = current_calc.error_reporting()
+        if escape == 'e':
+            continue
+    if express_type == 4:
+        if current_calc.expression.isalpha():
+            print(int(current_calc.history[current_calc.expression]))
+        else:
+            print(int(current_calc.expression))
+        escape = current_calc.error_reporting()
+        if escape == 'e':
+            continue
