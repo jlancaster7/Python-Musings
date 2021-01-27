@@ -1,0 +1,66 @@
+import random
+
+
+file = open('rating.txt', 'r+')  # Check and see if this creates a rating.txt file if none exist.
+rate = file.read().split('\n')
+rate.remove('')
+rate_dict = {}
+for i in range(len(rate)):
+    rate[i] = rate[i].split(' ')
+    rate_dict[rate[i][0]] = int(rate[i][1])
+
+name = input('Enter your first name: ')
+print(f'Hello, {name}')
+print('Please enter the options to be available for the game or just press enter for Rock-Paper_Scissors:')
+options = input().split(',')
+
+if options[0] == '':
+    options = ['rock', 'paper', 'scissors']
+
+if name in rate_dict.keys():
+    user_score = rate_dict[name]
+else:
+    user_score = 0
+print("To exit the program, please enter !exit.")
+print("To see your score, please enter !rating")
+print("Okay, let's start")
+move = ''
+
+while move != '!exit':
+    move = input()
+    if move == '!exit':
+        break
+    if move == '!rating':
+        print('Your rating: ', user_score)
+        continue
+    if move not in options:
+        print('Invalid input')
+        continue
+    computer = random.choice(options)
+    option_size = int((len(options) - 1) / 2)
+    counter1 = 0
+    for x in options:
+        if move == x:
+            move_index = counter1
+        counter1 += 1
+    if move == computer:
+        print(f'There is a draw ({computer})')
+        user_score += 50
+        continue
+
+    t = options[move_index + 1:] + options[:move_index]
+
+    if computer in t[:option_size]:
+        print(f'Sorry, but computer chose {computer}')
+    if computer in t[option_size:]:
+        print(f'Well done. Computer chose {computer} and failed')
+        user_score += 100
+
+rate_dict[name] = user_score
+print('Bye!')
+file.seek(0)
+file.truncate()
+for x, y in rate_dict.items():
+    file.write(f"{x} {y}\n")
+
+file.close()
